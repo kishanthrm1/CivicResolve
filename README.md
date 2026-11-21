@@ -1,4 +1,5 @@
 # 🏛️ CivicResolve: AI-Powered Civic Issue Reporting and Resolution Platform
+🌐 **Live Demo:** https://civicresolve-if2m.onrender.com/
 > **Production-Grade Civic Technology Platform** | Built with Python, Flask, SQLite, Tailwind CSS, Leaflet.js, Chart.js, and Google Gemini 2.5 Flash (with 100% Offline AI Fallback).
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
