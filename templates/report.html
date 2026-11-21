@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}Report a Civic Issue - CivicResolve{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+    <!-- Page Header (Single H1 for WCAG compliance) -->
+    <div class="text-center max-w-2xl mx-auto mb-8 space-y-2">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 border border-brand-200 text-brand-700 text-xs font-semibold">
+            <i class="fa-solid fa-sparkles text-brand-500" aria-hidden="true"></i> AI Auto-Triage Enabled
+        </div>
+        <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">
+            Report a Civic Issue
+        </h1>
+        <p class="text-slate-600 text-sm">
+            Describe the problem or upload a photo. Our AI will automatically categorize it, evaluate its urgency, and assign it to the correct municipal division.
+        </p>
+    </div>
+
+    <!-- Main Reporting Card -->
+    <div class="bg-white rounded-3xl shadow-xl border border-slate-200/90 overflow-hidden">
+        
+        <!-- Header Banner with AI Mode indicator -->
+        <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-brand-950 p-6 text-white flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-300 text-lg" aria-hidden="true">
+                    <i class="fa-solid fa-file-pen"></i>
+                </div>
+                <div>
+                    <h2 class="text-base font-bold text-white">Citizen Report Form</h2>
+                    <p class="text-xs text-slate-300">Fast, anonymous, and directly connected to municipal workflows</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 text-xs">
+                <span class="text-slate-400">AI Engine:</span>
+                {% if has_gemini_key %}
+                    <span class="text-emerald-400 font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-bolt text-xs" aria-hidden="true"></i> Gemini Active
+                    </span>
+                {% else %}
+                    <span class="text-amber-400 font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-brain text-xs" aria-hidden="true"></i> Demo Mode Active
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Form Body with CSRF Protection -->
+        <form id="report-form" action="{{ url_for('citizen.report') }}" method="POST" enctype="multipart/form-data" class="p-6 sm:p-10 space-y-8" novalidate>
+            <!-- CSRF Token (Flask-WTF) -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- Section 1: Issue Details -->
+            <fieldset class="space-y-6">
+                <legend class="border-b border-slate-100 pb-3 flex items-center gap-2 text-slate-900 font-bold text-base w-full">
+                    <i class="fa-solid fa-circle-info text-brand-600" aria-hidden="true"></i>
+                    <span>1. Describe the Problem</span>
+                </legend>
+
+                <!-- Title -->
+                <div>
+                    <label for="title" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                        Issue Title <span class="text-rose-500" aria-hidden="true">*</span>
+                        <span class="sr-only">(required)</span>
+                    </label>
+                    <input type="text" id="title" name="title" required maxlength="150"
+                           value="{{ prev_title|default('') }}"
+                           placeholder="e.g. Deep crater pothole near Gandhipuram bus stand entrance" 
+                           aria-describedby="title-help"
+                           class="w-full px-4 py-3 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-900 font-medium placeholder-slate-400 transition">
+                    <p id="title-help" class="text-[11px] text-slate-500 mt-1.5">Be specific. Mention the key problem so AI can triage it accurately (3 to 150 characters).</p>
+                </div>
+
+                <!-- Category Selector -->
+                <div>
+                    <label for="category" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                        Category
+                    </label>
+                    <div class="relative">
+                        <select id="category" name="category" aria-describedby="category-help"
+                                class="w-full appearance-none px-4 py-3 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-900 bg-white font-medium pr-10 cursor-pointer">
+                            <option value="Auto-detect with AI" selected>✨ Auto-detect with AI (Recommended)</option>
+                            <option value="Pothole">Pothole</option>
+                            <option value="Road Damage">Road Damage</option>
+                            <option value="Garbage">Garbage / Waste Overflow</option>
+                            <option value="Streetlight">Streetlight / Lighting Outage</option>
+                            <option value="Water Leakage">Water Leakage / Pipe Burst</option>
+                            <option value="Drainage">Drainage / Open Manhole</option>
+                            <option value="Other">Other / Miscellaneous</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400" aria-hidden="true">
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
+                    <p id="category-help" class="text-[11px] text-slate-500 mt-1.5">Leave on "Auto-detect with AI" to let our model select the appropriate department automatically.</p>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label for="description" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                        Detailed Description <span class="text-rose-500" aria-hidden="true">*</span>
+                        <span class="sr-only">(required)</span>
+                    </label>
+                    <textarea id="description" name="description" rows="4" required maxlength="3000"
+                              placeholder="Describe the severity, exact landmark, and any potential hazard (e.g. 'Water is spewing 4 feet into the air, flooding the roadway and entering basements near the primary school. Vehicles are swerving violently.')"
+                              aria-describedby="description-help"
+                              class="w-full px-4 py-3 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-900 font-medium placeholder-slate-400 transition leading-relaxed">{{ prev_desc|default('') }}</textarea>
+                    <p id="description-help" class="text-[11px] text-slate-500 mt-1.5">Include safety context (e.g. "near a school", "live wire", "open manhole") for critical priority detection.</p>
+                </div>
+            </fieldset>
+
+            <!-- Section 2: Location & Geolocation -->
+            <fieldset class="space-y-6 pt-4">
+                <legend class="border-b border-slate-100 pb-3 flex items-center gap-2 text-slate-900 font-bold text-base w-full">
+                    <i class="fa-solid fa-map-pin text-brand-600" aria-hidden="true"></i>
+                    <span>2. Incident Location</span>
+                </legend>
+
+                <div>
+                    <label for="location" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                        Address / Street Name / Landmark <span class="text-rose-500" aria-hidden="true">*</span>
+                        <span class="sr-only">(required)</span>
+                    </label>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <div class="relative flex-1">
+                            <i class="fa-solid fa-location-dot absolute left-4 top-3.5 text-slate-400" aria-hidden="true"></i>
+                            <input type="text" id="location" name="location" required maxlength="250"
+                                   value="{{ prev_loc|default('') }}"
+                                   placeholder="e.g. Avinashi Road, near PSG Tech, Peelamedu, Coimbatore" 
+                                   aria-describedby="location-help"
+                                   class="w-full pl-11 pr-4 py-3 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-900 font-medium placeholder-slate-400 transition">
+                        </div>
+                        <button type="button" id="geo-btn" onclick="fetchCurrentLocation()"
+                                class="px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 transition flex items-center justify-center gap-2 whitespace-nowrap shadow-xs focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:outline-none">
+                            <i class="fa-solid fa-crosshairs text-brand-600" aria-hidden="true"></i> Use My Current Location
+                        </button>
+                    </div>
+                    <p id="location-help" class="text-[11px] text-slate-500 mt-1.5">Specify nearby crossroads, building names, or ward numbers.</p>
+                    <div id="geo-status" class="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5 hidden" role="status" aria-live="polite"></div>
+
+                    <!-- Hidden coordinate fields -->
+                    <input type="hidden" id="latitude" name="latitude" value="">
+                    <input type="hidden" id="longitude" name="longitude" value="">
+                </div>
+            </fieldset>
+
+            <!-- Section 3: Photo Upload with Preview -->
+            <fieldset class="space-y-6 pt-4">
+                <legend class="border-b border-slate-100 pb-3 flex items-center gap-2 text-slate-900 font-bold text-base w-full">
+                    <i class="fa-solid fa-camera text-brand-600" aria-hidden="true"></i>
+                    <span>3. Photo Attachment (Optional)</span>
+                </legend>
+
+                <div>
+                    <label for="image-input" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                        Upload Incident Photo (Max 5 MB)
+                    </label>
+                    <div class="mt-1 flex justify-center px-6 pt-6 pb-6 border-2 border-slate-300 border-dashed rounded-2xl hover:border-brand-400 transition cursor-pointer bg-slate-50/50" onclick="document.getElementById('image-input').click()">
+                        <div class="space-y-2 text-center">
+                            <div class="mx-auto h-12 w-12 text-slate-400 flex items-center justify-center rounded-full bg-slate-100" aria-hidden="true">
+                                <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-500"></i>
+                            </div>
+                            <div class="flex text-sm text-slate-600 justify-center">
+                                <span class="font-bold text-brand-600 hover:text-brand-500">Click to choose image</span>
+                                <span class="pl-1">or drag and drop</span>
+                            </div>
+                            <p class="text-xs text-slate-500">PNG, JPG, JPEG, WEBP up to 5 MB</p>
+                        </div>
+                    </div>
+                    <input id="image-input" name="image" type="file" accept="image/png,image/jpeg,image/webp" class="sr-only" onchange="previewSelectedImage(event)" aria-label="Select photographic evidence file">
+
+                    <!-- Image Preview Card -->
+                    <div id="image-preview-container" class="hidden mt-4 p-3 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-between gap-4" role="region" aria-label="Image Preview">
+                        <div class="flex items-center gap-3">
+                            <img id="image-preview" src="#" alt="Selected incident photo preview" class="h-16 w-16 object-cover rounded-xl border border-slate-300 shadow-xs">
+                            <div>
+                                <p id="preview-filename" class="text-xs font-bold text-slate-800 truncate max-w-xs">filename.jpg</p>
+                                <p id="preview-filesize" class="text-[11px] text-slate-500">0 KB</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="removeSelectedImage()" class="p-2 rounded-lg text-rose-600 hover:bg-rose-50 text-xs font-bold transition focus-visible:ring-2 focus-visible:ring-rose-500" aria-label="Remove uploaded photo">
+                            <i class="fa-solid fa-trash-can mr-1" aria-hidden="true"></i> Remove
+                        </button>
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Section 4: Citizen Contact (Optional) -->
+            <fieldset class="space-y-6 pt-4">
+                <legend class="border-b border-slate-100 pb-3 flex items-center gap-2 text-slate-900 font-bold text-base w-full">
+                    <i class="fa-solid fa-user-shield text-brand-600" aria-hidden="true"></i>
+                    <span>4. Reporter Details (Optional)</span>
+                </legend>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="citizen_name" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                            Your Name (Optional)
+                        </label>
+                        <input type="text" id="citizen_name" name="citizen_name" maxlength="100"
+                               value="{{ prev_name|default('') }}"
+                               placeholder="e.g. Karthik Subramanian" 
+                               aria-describedby="name-help"
+                               class="w-full px-4 py-3 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-900 font-medium placeholder-slate-400 transition">
+                        <p id="name-help" class="text-[11px] text-slate-500 mt-1">Leave blank to submit anonymously.</p>
+                    </div>
+
+                    <div>
+                        <label for="citizen_contact" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                            Phone / Email (Optional)
+                        </label>
+                        <input type="text" id="citizen_contact" name="citizen_contact" maxlength="100"
+                               value="{{ prev_contact|default('') }}"
+                               placeholder="e.g. +91 98421 11234" 
+                               aria-describedby="contact-help"
+                               class="w-full px-4 py-3 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-900 font-medium placeholder-slate-400 transition">
+                        <p id="contact-help" class="text-[11px] text-slate-500 mt-1">For official SMS/email updates on resolution.</p>
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Submit Section -->
+            <div class="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <a href="{{ url_for('citizen.index') }}" class="text-xs font-bold text-slate-500 hover:text-slate-800 transition focus-visible:ring-1 focus-visible:ring-brand-500 p-1 rounded">
+                    <i class="fa-solid fa-arrow-left mr-1" aria-hidden="true"></i> Cancel & Return Home
+                </a>
+
+                <button type="submit" id="submit-btn" 
+                        class="w-full sm:w-auto px-10 py-4 rounded-xl font-bold text-base text-white bg-gradient-to-r from-brand-600 via-teal-600 to-brand-700 hover:from-brand-700 hover:to-teal-800 shadow-xl shadow-brand-500/25 hover:shadow-2xl transition duration-200 flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-500 focus-visible:outline-none">
+                    <i class="fa-solid fa-bolt" aria-hidden="true"></i> Submit Complaint & Run AI Triage
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Accessible AI Submission Processing Overlay Modal (WCAG 4.1.3 Live Region) -->
+<div id="ai-loading-overlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="ai-overlay-title" aria-describedby="ai-overlay-desc">
+    <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6 border border-slate-200" aria-live="polite">
+        
+        <!-- Animated Ring Spinner -->
+        <div class="relative mx-auto h-20 w-20 flex items-center justify-center" aria-hidden="true">
+            <div class="absolute inset-0 rounded-full border-4 border-brand-200 border-t-brand-600 animate-spin"></div>
+            <i class="fa-solid fa-brain text-brand-600 text-2xl animate-pulse"></i>
+        </div>
+
+        <div class="space-y-2">
+            <h2 id="ai-overlay-title" class="text-xl font-extrabold text-slate-900">AI Triage in Progress</h2>
+            <p id="ai-overlay-desc" class="text-xs text-slate-500">Please wait while our models evaluate your report</p>
+        </div>
+
+        <!-- Animated Steps Checklist -->
+        <div class="space-y-3 text-left bg-slate-50 p-4 rounded-2xl border border-slate-200/80 text-xs">
+            <div id="step-1" class="flex items-center gap-3 text-brand-700 font-semibold">
+                <i class="fa-solid fa-spinner animate-spin text-brand-600" aria-hidden="true"></i>
+                <span>Analyzing title and description text...</span>
+            </div>
+            <div id="step-2" class="flex items-center gap-3 text-slate-400">
+                <i class="fa-regular fa-circle text-slate-300" aria-hidden="true"></i>
+                <span>Assessing urgency & priority factors...</span>
+            </div>
+            <div id="step-3" class="flex items-center gap-3 text-slate-400">
+                <i class="fa-regular fa-circle text-slate-300" aria-hidden="true"></i>
+                <span>Matching municipal department...</span>
+            </div>
+        </div>
+
+        <div class="text-[11px] text-slate-400 font-medium">
+            Generating unique tracking ID...
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function fetchCurrentLocation() {
+        const statusDiv = document.getElementById('geo-status');
+        const latInput = document.getElementById('latitude');
+        const lonInput = document.getElementById('longitude');
+        const locInput = document.getElementById('location');
+        const geoBtn = document.getElementById('geo-btn');
+
+        if (!navigator.geolocation) {
+            statusDiv.className = 'text-[11px] text-rose-600 mt-2 flex items-center gap-1.5';
+            statusDiv.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Geolocation is not supported by your browser.';
+            statusDiv.classList.remove('hidden');
+            return;
+        }
+
+        geoBtn.disabled = true;
+        geoBtn.innerHTML = '<i class="fa-solid fa-spinner animate-spin text-brand-600"></i> Acquiring GPS...';
+        statusDiv.className = 'text-[11px] text-brand-600 mt-2 flex items-center gap-1.5';
+        statusDiv.innerHTML = '<i class="fa-solid fa-location-arrow animate-pulse"></i> Requesting GPS coordinates...';
+        statusDiv.classList.remove('hidden');
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat = pos.coords.latitude.toFixed(6);
+                const lon = pos.coords.longitude.toFixed(6);
+                latInput.value = lat;
+                lonInput.value = lon;
+
+                if (!locInput.value.trim()) {
+                    locInput.value = `GPS: ${lat}, ${lon} (Coimbatore)`;
+                }
+
+                geoBtn.disabled = false;
+                geoBtn.className = 'px-4 py-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-300 transition flex items-center justify-center gap-2 whitespace-nowrap shadow-xs';
+                geoBtn.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600"></i> GPS Acquired';
+
+                statusDiv.className = 'text-[11px] text-emerald-700 mt-2 flex items-center gap-1.5';
+                statusDiv.innerHTML = `<i class="fa-solid fa-circle-check"></i> Coordinates pinned: ${lat}, ${lon}`;
+            },
+            (err) => {
+                geoBtn.disabled = false;
+                geoBtn.innerHTML = '<i class="fa-solid fa-crosshairs text-brand-600"></i> Use My Current Location';
+                statusDiv.className = 'text-[11px] text-rose-600 mt-2 flex items-center gap-1.5';
+                statusDiv.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Could not get location (${err.message}). You can type the address manually.`;
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+    }
+
+    function previewSelectedImage(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const previewContainer = document.getElementById('image-preview-container');
+            const previewImg = document.getElementById('image-preview');
+            const previewFilename = document.getElementById('preview-filename');
+            const previewFilesize = document.getElementById('preview-filesize');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                previewFilename.innerText = file.name;
+                previewFilesize.innerText = (file.size / 1024).toFixed(1) + ' KB';
+                previewContainer.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function removeSelectedImage() {
+        const input = document.getElementById('image-input');
+        const previewContainer = document.getElementById('image-preview-container');
+        input.value = '';
+        previewContainer.classList.add('hidden');
+    }
+
+    const reportForm = document.getElementById('report-form');
+    if (reportForm) {
+        reportForm.addEventListener('submit', function(e) {
+            // Client-side quick check
+            const title = document.getElementById('title').value.trim();
+            const desc = document.getElementById('description').value.trim();
+            const loc = document.getElementById('location').value.trim();
+            if (!title || !desc || !loc) {
+                return; // Let HTML5 / browser alert user
+            }
+
+            const overlay = document.getElementById('ai-loading-overlay');
+            overlay.classList.remove('hidden');
+
+            const step1 = document.getElementById('step-1');
+            const step2 = document.getElementById('step-2');
+            const step3 = document.getElementById('step-3');
+
+            setTimeout(() => {
+                step1.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i> <span>Complaint text validated</span>';
+                step2.className = 'flex items-center gap-3 text-brand-700 font-semibold';
+                step2.innerHTML = '<i class="fa-solid fa-spinner animate-spin text-brand-600"></i> <span>Assessing urgency & priority factors...</span>';
+            }, 600);
+
+            setTimeout(() => {
+                step2.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i> <span>Urgency & Priority classified</span>';
+                step3.className = 'flex items-center gap-3 text-brand-700 font-semibold';
+                step3.innerHTML = '<i class="fa-solid fa-spinner animate-spin text-brand-600"></i> <span>Routing to municipal department...</span>';
+            }, 1200);
+        });
+    }
+</script>
+{% endblock %}

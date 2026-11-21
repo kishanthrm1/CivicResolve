@@ -1,0 +1,586 @@
+{% extends "base.html" %}
+
+{% block title %}Municipal Staff Control Panel - CivicResolve{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    
+    <!-- Admin Header (Single H1) -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+        <div>
+            <div class="flex items-center gap-2 mb-1.5">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-900 text-white">
+                    <i class="fa-solid fa-shield-halved mr-1.5 text-brand-400" aria-hidden="true"></i> Municipal Command Center
+                </span>
+                <span class="text-xs text-slate-500 font-mono">Logged in as: <strong>{{ admin_user }}</strong></span>
+            </div>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Civic Complaint Triage & Dispatch</h1>
+            <p class="text-xs text-slate-500 mt-1">Review AI urgency scores, update work status, assign departmental crews, and override classification.</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <a href="{{ url_for('citizen.dashboard') }}" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 shadow-xs transition flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-slate-400">
+                <i class="fa-solid fa-eye" aria-hidden="true"></i> Public View
+            </a>
+            <a href="{{ url_for('admin.logout') }}" class="px-4 py-2 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-rose-500">
+                <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> Sign Out
+            </a>
+        </div>
+    </div>
+
+    <!-- Admin Top KPI Metric Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" role="region" aria-label="Administrative Key Performance Indicators">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+            <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Complaints</div>
+            <div class="text-3xl font-black text-slate-900 mt-1">{{ stats.total }}</div>
+            <div class="text-[11px] text-slate-500 mt-1">Across all wards</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-rose-200/80 bg-rose-50/20">
+            <div class="text-[11px] font-bold text-rose-700 uppercase tracking-wider flex items-center gap-1">
+                <span class="h-2 w-2 rounded-full bg-rose-500 animate-pulse" aria-hidden="true"></span> Critical Queue
+            </div>
+            <div class="text-3xl font-black text-rose-700 mt-1">{{ stats.critical }}</div>
+            <div class="text-[11px] text-rose-700/80 mt-1">Prioritized first in table</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-purple-200/80">
+            <div class="text-[11px] font-bold text-purple-700 uppercase tracking-wider">In Progress</div>
+            <div class="text-3xl font-black text-purple-700 mt-1">{{ stats.in_progress }}</div>
+            <div class="text-[11px] text-purple-700/80 mt-1">Crews actively dispatched</div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-emerald-200/80">
+            <div class="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Resolved</div>
+            <div class="text-3xl font-black text-emerald-700 mt-1">{{ stats.resolved }}</div>
+            <div class="text-[11px] text-emerald-700/80 mt-1">Successfully remediated</div>
+        </div>
+    </div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <form method="GET" action="{{ url_for('admin.dashboard') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+            <div>
+                <label for="status" class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">Status</label>
+                <select id="status" name="status" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-medium">
+                    <option value="All" {% if current_status == 'All' %}selected{% endif %}>All Statuses</option>
+                    <option value="Reported" {% if current_status == 'Reported' %}selected{% endif %}>Reported</option>
+                    <option value="In Progress" {% if current_status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                    <option value="Resolved" {% if current_status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="category" class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">Category</label>
+                <select id="category" name="category" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-medium">
+                    <option value="All" {% if current_category == 'All' %}selected{% endif %}>All Categories</option>
+                    <option value="Pothole" {% if current_category == 'Pothole' %}selected{% endif %}>Pothole</option>
+                    <option value="Road Damage" {% if current_category == 'Road Damage' %}selected{% endif %}>Road Damage</option>
+                    <option value="Garbage" {% if current_category == 'Garbage' %}selected{% endif %}>Garbage</option>
+                    <option value="Streetlight" {% if current_category == 'Streetlight' %}selected{% endif %}>Streetlight</option>
+                    <option value="Water Leakage" {% if current_category == 'Water Leakage' %}selected{% endif %}>Water Leakage</option>
+                    <option value="Drainage" {% if current_category == 'Drainage' %}selected{% endif %}>Drainage</option>
+                    <option value="Other" {% if current_category == 'Other' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="priority" class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">Priority</label>
+                <select id="priority" name="priority" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-medium">
+                    <option value="All" {% if current_priority == 'All' %}selected{% endif %}>All Priorities</option>
+                    <option value="Critical" {% if current_priority == 'Critical' %}selected{% endif %}>Critical</option>
+                    <option value="High" {% if current_priority == 'High' %}selected{% endif %}>High</option>
+                    <option value="Medium" {% if current_priority == 'Medium' %}selected{% endif %}>Medium</option>
+                    <option value="Low" {% if current_priority == 'Low' %}selected{% endif %}>Low</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="search" class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">Search Keyword</label>
+                <input type="text" id="search" name="search" value="{{ current_search }}" placeholder="Code, title, location..." 
+                       class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-medium">
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button type="submit" class="flex-1 py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs focus-visible:ring-2 focus-visible:ring-slate-900">
+                    <i class="fa-solid fa-filter" aria-hidden="true"></i> Filter
+                </button>
+                <a href="{{ url_for('admin.dashboard') }}" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition text-center focus-visible:ring-2 focus-visible:ring-slate-400" title="Reset Filters">
+                    <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Complaints Management Table -->
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-200/90 overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <h2 class="font-bold text-sm text-slate-900">Complaints Dispatch Table</h2>
+                <span class="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono font-semibold">{{ total_count }} total items</span>
+            </div>
+            <div class="text-[11px] text-slate-500">
+                Sorted by: <span class="font-bold text-rose-700">Critical First</span>, then Date
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200 text-left text-xs" aria-label="Municipal Complaints Table">
+                <thead class="bg-slate-50 text-slate-600 uppercase font-bold text-[10px] tracking-wider">
+                    <tr>
+                        <th scope="col" class="px-4 py-3.5">ID & Date</th>
+                        <th scope="col" class="px-4 py-3.5">Issue & Location</th>
+                        <th scope="col" class="px-4 py-3.5">Priority</th>
+                        <th scope="col" class="px-4 py-3.5">Category & Dept</th>
+                        <th scope="col" class="px-4 py-3.5">Status</th>
+                        <th scope="col" class="px-4 py-3.5">AI Engine</th>
+                        <th scope="col" class="px-4 py-3.5 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-medium">
+                    {% for c in complaints %}
+                    <tr id="row-{{ c.id }}" class="hover:bg-slate-50/80 transition {% if c.priority == 'Critical' and c.status != 'Resolved' %}bg-rose-50/30{% endif %}">
+                        
+                        <!-- ID & Date -->
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <span class="font-mono font-bold text-brand-700 block">{{ c.complaint_code }}</span>
+                            <span class="text-[10px] text-slate-500 block mt-0.5">{{ c.created_at[:10] }}</span>
+                        </td>
+
+                        <!-- Issue & Location -->
+                        <td class="px-4 py-4 max-w-xs">
+                            <div class="font-bold text-slate-900 truncate" title="{{ c.title }}">
+                                <a href="{{ url_for('citizen.complaint_detail', id=c.id) }}" class="hover:text-brand-600 focus-visible:ring-1 focus-visible:ring-brand-500 rounded">
+                                    {{ c.title }}
+                                </a>
+                            </div>
+                            <div class="text-[11px] text-slate-600 truncate flex items-center gap-1 mt-0.5" title="{{ c.location }}">
+                                <i class="fa-solid fa-location-dot text-rose-500 text-[10px]" aria-hidden="true"></i> {{ c.location }}
+                            </div>
+                            {% if c.admin_remarks %}
+                            <div class="text-[10px] text-amber-900 bg-amber-50 px-2 py-0.5 rounded mt-1 truncate" title="{{ c.admin_remarks }}">
+                                💬 {{ c.admin_remarks }}
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Priority Badge -->
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <span id="priority-badge-{{ c.id }}" class="px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1
+                                {% if c.priority == 'Critical' %}bg-rose-50 text-rose-800 border border-rose-300
+                                {% elif c.priority == 'High' %}bg-amber-50 text-amber-800 border border-amber-300
+                                {% elif c.priority == 'Medium' %}bg-yellow-50 text-yellow-800 border border-yellow-300
+                                {% else %}bg-emerald-50 text-emerald-800 border border-emerald-300{% endif %}">
+                                {% if c.priority == 'Critical' %}
+                                    <span class="h-1.5 w-1.5 rounded-full bg-rose-600 animate-ping" aria-hidden="true"></span>
+                                {% endif %}
+                                {{ c.priority }} Priority
+                            </span>
+                        </td>
+
+                        <!-- Category & Dept -->
+                        <td class="px-4 py-4 max-w-[180px]">
+                            <span id="category-badge-{{ c.id }}" class="font-semibold text-slate-800 block text-xs">{{ c.category }}</span>
+                            <span id="dept-badge-{{ c.id }}" class="text-[11px] text-slate-600 truncate block mt-0.5" title="{{ c.department }}">{{ c.department }}</span>
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <span id="status-badge-{{ c.id }}" class="px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1
+                                {% if c.status == 'Resolved' %}bg-emerald-100 text-emerald-900
+                                {% elif c.status == 'In Progress' %}bg-purple-100 text-purple-900
+                                {% else %}bg-blue-100 text-blue-900{% endif %}">
+                                {{ c.status }}
+                            </span>
+                        </td>
+
+                        <!-- AI Engine & Confidence -->
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <span class="text-[11px] font-semibold text-slate-700 block">
+                                {{ c.ai_mode }}
+                            </span>
+                            <span class="text-[10px] text-slate-500 font-mono">
+                                Conf: {{ c.ai_confidence }}%
+                            </span>
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="px-4 py-4 whitespace-nowrap text-right space-x-1">
+                            <button type="button" 
+                                    onclick="openStatusModal({{ c.id }}, '{{ c.complaint_code }}', '{{ c.status }}', '{{ c.admin_remarks|replace("'", "\\'")|default('') }}')"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] transition shadow-xs focus-visible:ring-2 focus-visible:ring-slate-900" title="Change Status & Remarks">
+                                <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i> Status
+                            </button>
+
+                            <button type="button" 
+                                    onclick="openOverrideModal({{ c.id }}, '{{ c.complaint_code }}', '{{ c.category }}', '{{ c.priority }}', '{{ c.department|replace("'", "\\'") }}')"
+                                    class="px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition focus-visible:ring-2 focus-visible:ring-slate-400" title="Override Category/Priority">
+                                <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                            </button>
+
+                            <button type="button" 
+                                    onclick="rerunAI({{ c.id }}, this)"
+                                    class="px-2 py-1.5 rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold text-[11px] transition focus-visible:ring-2 focus-visible:ring-brand-500" title="Re-run AI Analysis">
+                                <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+                            </button>
+
+                            <button type="button" 
+                                    onclick="deleteComplaint({{ c.id }}, '{{ c.complaint_code }}')"
+                                    class="px-2 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[11px] transition focus-visible:ring-2 focus-visible:ring-rose-500" title="Delete Spam">
+                                <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                            </button>
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Accessible Admin Pagination Controls -->
+        {% if total_pages > 1 %}
+        <nav class="flex items-center justify-between border-t border-slate-200 px-4 py-4 sm:px-6" aria-label="Admin Table Pagination">
+            <div class="flex w-0 flex-1">
+                {% if page > 1 %}
+                <a href="{{ url_for('admin.dashboard', page=page-1, status=current_status, category=current_category, priority=current_priority, search=current_search) }}" 
+                   class="inline-flex items-center text-xs font-bold text-slate-600 hover:text-slate-900">
+                    <i class="fa-solid fa-arrow-left mr-2" aria-hidden="true"></i> Previous
+                </a>
+                {% endif %}
+            </div>
+            <div class="hidden sm:flex items-center text-xs text-slate-500 font-medium">
+                Page {{ page }} of {{ total_pages }} ({{ total_count }} total complaints)
+            </div>
+            <div class="flex w-0 flex-1 justify-end">
+                {% if page < total_pages %}
+                <a href="{{ url_for('admin.dashboard', page=page+1, status=current_status, category=current_category, priority=current_priority, search=current_search) }}" 
+                   class="inline-flex items-center text-xs font-bold text-slate-600 hover:text-slate-900">
+                    Next <i class="fa-solid fa-arrow-right ml-2" aria-hidden="true"></i>
+                </a>
+                {% endif %}
+            </div>
+        </nav>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Modal 1: Update Status & Remarks -->
+<div id="status-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="status-modal-title">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 animate-fade-in">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 id="status-modal-title" class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-arrows-rotate text-brand-600" aria-hidden="true"></i> Update Resolution Status
+            </h2>
+            <button type="button" onclick="closeStatusModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded focus-visible:ring-2 focus-visible:ring-slate-400" aria-label="Close dialog">
+                <i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <form id="status-form" onsubmit="submitStatusUpdate(event)" class="space-y-4">
+            <input type="hidden" id="status-complaint-id" value="">
+
+            <div>
+                <span class="text-xs text-slate-500 block uppercase font-semibold">Complaint Code:</span>
+                <span id="status-modal-code" class="font-mono font-bold text-base text-slate-900"></span>
+            </div>
+
+            <div>
+                <label for="status-select" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    Select New Status
+                </label>
+                <select id="status-select" required class="w-full px-3 py-2.5 text-xs rounded-xl border border-slate-300 font-bold focus:ring-2 focus:ring-brand-500">
+                    <option value="Reported">Reported (New)</option>
+                    <option value="In Progress">In Progress (Dispatched / Under Repair)</option>
+                    <option value="Resolved">Resolved (Remediation Complete)</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="status-remark" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    Official Admin Remark <span class="text-slate-400 text-[10px]">(Visible on citizen tracking timeline)</span>
+                </label>
+                <textarea id="status-remark" rows="3" required maxlength="500"
+                          placeholder="e.g. Field crew deployed with hot asphalt mix. Work scheduled tonight."
+                          class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-brand-500"></textarea>
+            </div>
+
+            <div class="pt-2 flex justify-end gap-2">
+                <button type="button" onclick="closeStatusModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100">
+                    Cancel
+                </button>
+                <button type="submit" id="status-submit-btn" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-sm transition">
+                    Save Status Update
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal 2: Reassign / Override AI -->
+<div id="override-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="override-modal-title">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 animate-fade-in">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 id="override-modal-title" class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-sliders text-indigo-600" aria-hidden="true"></i> Override Category / Priority
+            </h2>
+            <button type="button" onclick="closeOverrideModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded focus-visible:ring-2 focus-visible:ring-slate-400" aria-label="Close dialog">
+                <i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <form id="override-form" onsubmit="submitOverride(event)" class="space-y-4">
+            <input type="hidden" id="override-complaint-id" value="">
+
+            <div>
+                <span class="text-xs text-slate-500 block uppercase font-semibold">Complaint Code:</span>
+                <span id="override-modal-code" class="font-mono font-bold text-base text-slate-900"></span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label for="override-category" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Category
+                    </label>
+                    <select id="override-category" required class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-bold focus:ring-2 focus:ring-brand-500">
+                        <option value="Pothole">Pothole</option>
+                        <option value="Road Damage">Road Damage</option>
+                        <option value="Garbage">Garbage</option>
+                        <option value="Streetlight">Streetlight</option>
+                        <option value="Water Leakage">Water Leakage</option>
+                        <option value="Drainage">Drainage</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="override-priority" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Priority
+                    </label>
+                    <select id="override-priority" required class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-bold focus:ring-2 focus:ring-brand-500">
+                        <option value="Critical">Critical</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label for="override-department" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    Assigned Municipal Department
+                </label>
+                <select id="override-department" required class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-bold focus:ring-2 focus:ring-brand-500">
+                    <option value="Roads & Highways Department">Roads & Highways Department</option>
+                    <option value="Solid Waste Management / Sanitation Department">Solid Waste Management / Sanitation Department</option>
+                    <option value="Electricity Department / Street Lighting Division">Electricity Department / Street Lighting Division</option>
+                    <option value="Water Supply & Sewerage Board">Water Supply & Sewerage Board</option>
+                    <option value="Storm Water Drain Department">Storm Water Drain Department</option>
+                    <option value="General Municipal Administration">General Municipal Administration</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="override-reason" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    Reason for Override
+                </label>
+                <input type="text" id="override-reason" required maxlength="250"
+                       placeholder="e.g. Field inspection confirmed pipe rupture is affecting residential basements"
+                       class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-brand-500">
+            </div>
+
+            <div class="pt-2 flex justify-end gap-2">
+                <button type="button" onclick="closeOverrideModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100">
+                    Cancel
+                </button>
+                <button type="submit" id="override-submit-btn" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-sm transition">
+                    Apply Override
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Extract CSRF Token for all AJAX POST requests
+    function getCsrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
+    function openStatusModal(id, code, currentStatus, currentRemark) {
+        document.getElementById('status-complaint-id').value = id;
+        document.getElementById('status-modal-code').innerText = code;
+        document.getElementById('status-select').value = currentStatus;
+        document.getElementById('status-remark').value = currentRemark || '';
+        document.getElementById('status-modal').classList.remove('hidden');
+    }
+
+    function closeStatusModal() {
+        document.getElementById('status-modal').classList.add('hidden');
+    }
+
+    function submitStatusUpdate(e) {
+        e.preventDefault();
+        const id = document.getElementById('status-complaint-id').value;
+        const newStatus = document.getElementById('status-select').value;
+        const remark = document.getElementById('status-remark').value;
+        const btn = document.getElementById('status-submit-btn');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> Saving...';
+
+        fetch(`/api/complaint/${id}/update-status`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ status: newStatus, remark: remark })
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = 'Save Status Update';
+            closeStatusModal();
+            if (data.success) {
+                window.showGlobalToast(`Status updated to ${newStatus}`, 'success');
+                const badge = document.getElementById(`status-badge-${id}`);
+                if (badge) {
+                    badge.innerText = newStatus;
+                    badge.className = `px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1 ${
+                        newStatus === 'Resolved' ? 'bg-emerald-100 text-emerald-900' :
+                        newStatus === 'In Progress' ? 'bg-purple-100 text-purple-900' : 'bg-blue-100 text-blue-900'
+                    }`;
+                }
+            } else {
+                window.showGlobalToast(data.error || 'Failed to update', 'error');
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = 'Save Status Update';
+            window.showGlobalToast('Error communicating with server', 'error');
+        });
+    }
+
+    function openOverrideModal(id, code, category, priority, department) {
+        document.getElementById('override-complaint-id').value = id;
+        document.getElementById('override-modal-code').innerText = code;
+        document.getElementById('override-category').value = category;
+        document.getElementById('override-priority').value = priority;
+        document.getElementById('override-department').value = department;
+        document.getElementById('override-modal').classList.remove('hidden');
+    }
+
+    function closeOverrideModal() {
+        document.getElementById('override-modal').classList.add('hidden');
+    }
+
+    function submitOverride(e) {
+        e.preventDefault();
+        const id = document.getElementById('override-complaint-id').value;
+        const category = document.getElementById('override-category').value;
+        const priority = document.getElementById('override-priority').value;
+        const department = document.getElementById('override-department').value;
+        const reason = document.getElementById('override-reason').value;
+        const btn = document.getElementById('override-submit-btn');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> Applying...';
+
+        fetch(`/api/complaint/${id}/update-details`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ category, priority, department, priority_reason: reason })
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = 'Apply Override';
+            closeOverrideModal();
+            if (data.success) {
+                window.showGlobalToast('Complaint details overridden', 'success');
+                const catBadge = document.getElementById(`category-badge-${id}`);
+                const deptBadge = document.getElementById(`dept-badge-${id}`);
+                const prioBadge = document.getElementById(`priority-badge-${id}`);
+                if (catBadge) catBadge.innerText = category;
+                if (deptBadge) deptBadge.innerText = department;
+                if (prioBadge) {
+                    prioBadge.innerText = `${priority} Priority`;
+                    prioBadge.className = `px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1 ${
+                        priority === 'Critical' ? 'bg-rose-50 text-rose-800 border border-rose-300' :
+                        priority === 'High' ? 'bg-amber-50 text-amber-800 border border-amber-300' :
+                        priority === 'Medium' ? 'bg-yellow-50 text-yellow-800 border border-yellow-300' : 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+                    }`;
+                }
+            } else {
+                window.showGlobalToast(data.error || 'Failed to update', 'error');
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = 'Apply Override';
+            window.showGlobalToast('Error communicating with server', 'error');
+        });
+    }
+
+    function rerunAI(id, btn) {
+        btn.disabled = true;
+        const origHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i>';
+
+        fetch(`/api/complaint/${id}/rerun-ai`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+            if (data.success) {
+                window.showGlobalToast(`AI re-analyzed: ${data.result.category} (${data.result.priority})`, 'success');
+                setTimeout(() => window.location.reload(), 800);
+            } else {
+                window.showGlobalToast('Failed to run AI analysis', 'error');
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+            window.showGlobalToast('Error executing AI analysis', 'error');
+        });
+    }
+
+    function deleteComplaint(id, code) {
+        if (!confirm(`Are you sure you want to delete complaint ${code}? This cannot be undone.`)) {
+            return;
+        }
+
+        fetch(`/api/complaint/${id}/delete`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                window.showGlobalToast(`Complaint ${code} deleted`, 'success');
+                const row = document.getElementById(`row-${id}`);
+                if (row) row.remove();
+            } else {
+                window.showGlobalToast('Could not delete complaint', 'error');
+            }
+        })
+        .catch(err => window.showGlobalToast('Error communicating with server', 'error'));
+    }
+</script>
+{% endblock %}

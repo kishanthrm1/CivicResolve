@@ -1,0 +1,476 @@
+{% extends "base.html" %}
+
+{% block title %}Public Civic Dashboard & Map - CivicResolve{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    
+    <!-- Dashboard Header (Single H1) -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+        <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 border border-brand-200 text-brand-700 text-xs font-semibold mb-2">
+                <i class="fa-solid fa-earth-americas text-brand-500" aria-hidden="true"></i> Open Governance Transparency
+            </div>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Public Civic Dashboard</h1>
+            <p class="text-sm text-slate-600 mt-1">Live analytics, spatial mapping, and resolution tracking across municipal wards.</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <a href="{{ url_for('citizen.report') }}" class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-md transition flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-brand-500">
+                <i class="fa-solid fa-plus-circle" aria-hidden="true"></i> Report Issue
+            </a>
+            <a href="{{ url_for('citizen.track') }}" class="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 shadow-xs transition flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-slate-400">
+                <i class="fa-solid fa-barcode" aria-hidden="true"></i> Track by ID
+            </a>
+        </div>
+    </div>
+
+    <!-- Live Stat Counters -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4" role="region" aria-label="Key Performance Metrics">
+        
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+            <div class="h-11 w-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-xl" aria-hidden="true">
+                <i class="fa-solid fa-layer-group"></i>
+            </div>
+            <div>
+                <div class="text-2xl font-black text-slate-900">{{ stats.total }}</div>
+                <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Complaints</div>
+            </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+            <div class="h-11 w-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl" aria-hidden="true">
+                <i class="fa-solid fa-inbox"></i>
+            </div>
+            <div>
+                <div class="text-2xl font-black text-blue-600">{{ stats.reported }}</div>
+                <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Reported (New)</div>
+            </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+            <div class="h-11 w-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl" aria-hidden="true">
+                <i class="fa-solid fa-screwdriver-wrench"></i>
+            </div>
+            <div>
+                <div class="text-2xl font-black text-purple-600">{{ stats.in_progress }}</div>
+                <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">In Progress</div>
+            </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+            <div class="h-11 w-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl" aria-hidden="true">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div>
+                <div class="text-2xl font-black text-emerald-600">{{ stats.resolved }}</div>
+                <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Resolved</div>
+            </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4 col-span-2 sm:col-span-1">
+            <div class="h-11 w-11 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl" aria-hidden="true">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div>
+                <div class="text-2xl font-black text-rose-600">{{ stats.critical }}</div>
+                <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Critical Priority</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Analytics Charts & Visual Map Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left: Chart.js Visualizations (5 cols) -->
+        <div class="lg:col-span-5 space-y-6">
+            
+            <!-- Category Chart -->
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/90 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-brand-600" aria-hidden="true"></i> Complaints by Category
+                    </h2>
+                    <span class="text-[11px] font-semibold text-slate-400">Distribution</span>
+                </div>
+                <div class="relative h-56 flex items-center justify-center" aria-label="Donut chart showing complaint category breakdown" role="img">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Status Breakdown Chart -->
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/90 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-simple text-teal-600" aria-hidden="true"></i> Resolution Status
+                    </h2>
+                    <span class="text-[11px] font-semibold text-slate-400">Progression</span>
+                </div>
+                <div class="relative h-44 flex items-center justify-center" aria-label="Bar chart showing complaint status breakdown" role="img">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right: Interactive Leaflet Map (7 cols) -->
+        <div class="lg:col-span-7">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/90 space-y-4 h-full flex flex-col">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div>
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                            <i class="fa-solid fa-map-location-dot text-indigo-600" aria-hidden="true"></i> Interactive Incident Map
+                        </h2>
+                        <p class="text-[11px] text-slate-400">Coimbatore Municipal Corporation Area</p>
+                    </div>
+
+                    <!-- Map Priority Legend -->
+                    <div class="flex items-center gap-2 text-[10px] font-bold" aria-label="Map Priority Legend">
+                        <span class="inline-flex items-center gap-1 text-rose-800 bg-rose-50 px-2 py-0.5 rounded border border-rose-300">
+                            <span class="h-1.5 w-1.5 rounded-full bg-rose-600" aria-hidden="true"></span> Critical
+                        </span>
+                        <span class="inline-flex items-center gap-1 text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-300">
+                            <span class="h-1.5 w-1.5 rounded-full bg-amber-600" aria-hidden="true"></span> High
+                        </span>
+                        <span class="inline-flex items-center gap-1 text-yellow-800 bg-yellow-50 px-2 py-0.5 rounded border border-yellow-300">
+                            <span class="h-1.5 w-1.5 rounded-full bg-yellow-600" aria-hidden="true"></span> Med
+                        </span>
+                        <span class="inline-flex items-center gap-1 text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300">
+                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-600" aria-hidden="true"></span> Low
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Map Container -->
+                <div id="civic-map" class="w-full flex-1 min-h-[380px] rounded-2xl border border-slate-200 overflow-hidden z-10 shadow-inner" role="application" aria-label="Map displaying reported municipal issues">
+                    <!-- Populated by Leaflet.js -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/90 space-y-4">
+        <form method="GET" action="{{ url_for('citizen.dashboard') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+            
+            <!-- Status Filter -->
+            <div>
+                <label for="status" class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                    Status
+                </label>
+                <select id="status" name="status" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-brand-500">
+                    <option value="All" {% if current_status == 'All' %}selected{% endif %}>All Statuses</option>
+                    <option value="Reported" {% if current_status == 'Reported' %}selected{% endif %}>Reported</option>
+                    <option value="In Progress" {% if current_status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                    <option value="Resolved" {% if current_status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                </select>
+            </div>
+
+            <!-- Category Filter -->
+            <div>
+                <label for="category" class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                    Category
+                </label>
+                <select id="category" name="category" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-brand-500">
+                    <option value="All" {% if current_category == 'All' %}selected{% endif %}>All Categories</option>
+                    <option value="Pothole" {% if current_category == 'Pothole' %}selected{% endif %}>Pothole</option>
+                    <option value="Road Damage" {% if current_category == 'Road Damage' %}selected{% endif %}>Road Damage</option>
+                    <option value="Garbage" {% if current_category == 'Garbage' %}selected{% endif %}>Garbage</option>
+                    <option value="Streetlight" {% if current_category == 'Streetlight' %}selected{% endif %}>Streetlight</option>
+                    <option value="Water Leakage" {% if current_category == 'Water Leakage' %}selected{% endif %}>Water Leakage</option>
+                    <option value="Drainage" {% if current_category == 'Drainage' %}selected{% endif %}>Drainage</option>
+                    <option value="Other" {% if current_category == 'Other' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+
+            <!-- Priority Filter -->
+            <div>
+                <label for="priority" class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                    Priority
+                </label>
+                <select id="priority" name="priority" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-brand-500">
+                    <option value="All" {% if current_priority == 'All' %}selected{% endif %}>All Priorities</option>
+                    <option value="Critical" {% if current_priority == 'Critical' %}selected{% endif %}>Critical</option>
+                    <option value="High" {% if current_priority == 'High' %}selected{% endif %}>High</option>
+                    <option value="Medium" {% if current_priority == 'Medium' %}selected{% endif %}>Medium</option>
+                    <option value="Low" {% if current_priority == 'Low' %}selected{% endif %}>Low</option>
+                </select>
+            </div>
+
+            <!-- Search input -->
+            <div>
+                <label for="search" class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                    Search Keyword / ID
+                </label>
+                <input type="text" id="search" name="search" value="{{ current_search }}" placeholder="Code, area, keyword..." 
+                       class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-brand-500">
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex items-center gap-2">
+                <button type="submit" class="flex-1 py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs focus-visible:ring-2 focus-visible:ring-slate-900">
+                    <i class="fa-solid fa-filter" aria-hidden="true"></i> Apply Filters
+                </button>
+                <a href="{{ url_for('citizen.dashboard') }}" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition text-center focus-visible:ring-2 focus-visible:ring-slate-400" title="Reset Filters">
+                    <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Reset
+                </a>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Filtered Complaints List -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between text-xs text-slate-600">
+            <div>
+                Showing <strong class="text-slate-900">{{ complaints|length }}</strong> of <strong class="text-slate-900">{{ total_count }}</strong> registered complaints (Page {{ page }} of {{ total_pages }})
+            </div>
+            <div class="text-[11px] text-slate-500">
+                Sorted by most recent
+            </div>
+        </div>
+
+        {% if complaints %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for c in complaints %}
+                    <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition p-5 flex flex-col justify-between space-y-4">
+                        <div class="space-y-3">
+                            <!-- Code & Priority Badge -->
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg">
+                                    {{ c.complaint_code }}
+                                </span>
+
+                                <span class="px-2.5 py-0.5 rounded text-[11px] font-bold inline-flex items-center gap-1
+                                    {% if c.priority == 'Critical' %}bg-rose-50 text-rose-800 border border-rose-300
+                                    {% elif c.priority == 'High' %}bg-amber-50 text-amber-800 border border-amber-300
+                                    {% elif c.priority == 'Medium' %}bg-yellow-50 text-yellow-800 border border-yellow-300
+                                    {% else %}bg-emerald-50 text-emerald-800 border border-emerald-300{% endif %}">
+                                    <i class="fa-solid fa-triangle-exclamation text-[10px]" aria-hidden="true"></i>
+                                    {{ c.priority }}
+                                </span>
+                            </div>
+
+                            <!-- Thumbnail if available -->
+                            {% if c.image_path %}
+                            <div class="h-32 w-full overflow-hidden rounded-xl bg-slate-100">
+                                <img src="{{ url_for('static', filename=c.image_path) }}" alt="Photographic evidence for {{ c.title }}" class="h-full w-full object-cover">
+                            </div>
+                            {% endif %}
+
+                            <!-- Title -->
+                            <h3 class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">
+                                <a href="{{ url_for('citizen.complaint_detail', id=c.id) }}" class="hover:text-brand-600 transition focus-visible:ring-1 focus-visible:ring-brand-500 rounded">
+                                    {{ c.title }}
+                                </a>
+                            </h3>
+
+                            <p class="text-xs text-slate-600 line-clamp-2">
+                                {{ c.description }}
+                            </p>
+
+                            <!-- Department -->
+                            <div class="text-[11px] text-slate-700 flex items-center gap-1.5 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <i class="fa-solid fa-building text-slate-500 text-xs" aria-hidden="true"></i>
+                                <span class="truncate">{{ c.department }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Card Footer -->
+                        <div class="pt-3 border-t border-slate-100 space-y-2">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-600 truncate max-w-[150px]">
+                                    <i class="fa-solid fa-location-dot text-rose-500 mr-1" aria-hidden="true"></i> {{ c.location }}
+                                </span>
+
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold 
+                                    {% if c.status == 'Resolved' %}bg-emerald-100 text-emerald-900
+                                    {% elif c.status == 'In Progress' %}bg-purple-100 text-purple-900
+                                    {% else %}bg-blue-100 text-blue-900{% endif %}">
+                                    {{ c.status }}
+                                </span>
+                            </div>
+
+                            <div class="flex items-center justify-between pt-1 text-xs">
+                                <span class="text-slate-500 font-mono text-[10px]">{{ c.created_at[:10] }}</span>
+                                <div class="flex items-center gap-2">
+                                    <a href="{{ url_for('citizen.track', code=c.complaint_code) }}" class="text-brand-700 hover:text-brand-800 font-bold text-xs focus-visible:ring-1 focus-visible:ring-brand-500 p-0.5 rounded">
+                                        Track
+                                    </a>
+                                    <span class="text-slate-300" aria-hidden="true">&bull;</span>
+                                    <a href="{{ url_for('citizen.complaint_detail', id=c.id) }}" class="text-slate-700 hover:text-slate-900 font-bold text-xs focus-visible:ring-1 focus-visible:ring-slate-500 p-0.5 rounded">
+                                        Details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Accessible Pagination Controls (WCAG) -->
+            {% if total_pages > 1 %}
+            <nav class="flex items-center justify-between border-t border-slate-200 px-4 py-4 sm:px-0" aria-label="Complaints List Pagination">
+                <div class="flex w-0 flex-1">
+                    {% if page > 1 %}
+                    <a href="{{ url_for('citizen.dashboard', page=page-1, status=current_status, category=current_category, priority=current_priority, search=current_search) }}" 
+                       class="inline-flex items-center border-t-2 border-transparent pr-1 pt-4 text-xs font-bold text-slate-600 hover:border-slate-300 hover:text-slate-800">
+                        <i class="fa-solid fa-arrow-left mr-2" aria-hidden="true"></i> Previous Page
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="hidden md:flex">
+                    {% for p in range(1, total_pages + 1) %}
+                        {% if p == page %}
+                        <span class="inline-flex items-center border-t-2 border-brand-600 px-4 pt-4 text-xs font-bold text-brand-600" aria-current="page">{{ p }}</span>
+                        {% else %}
+                        <a href="{{ url_for('citizen.dashboard', page=p, status=current_status, category=current_category, priority=current_priority, search=current_search) }}" 
+                           class="inline-flex items-center border-t-2 border-transparent px-4 pt-4 text-xs font-medium text-slate-500 hover:border-slate-300 hover:text-slate-700">{{ p }}</a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="flex w-0 flex-1 justify-end">
+                    {% if page < total_pages %}
+                    <a href="{{ url_for('citizen.dashboard', page=page+1, status=current_status, category=current_category, priority=current_priority, search=current_search) }}" 
+                       class="inline-flex items-center border-t-2 border-transparent pl-1 pt-4 text-xs font-bold text-slate-600 hover:border-slate-300 hover:text-slate-800">
+                        Next Page <i class="fa-solid fa-arrow-right ml-2" aria-hidden="true"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </nav>
+            {% endif %}
+
+        {% else %}
+            <div class="bg-white p-12 text-center rounded-3xl border border-slate-200 space-y-3" role="status">
+                <i class="fa-solid fa-filter-circle-xmark text-3xl text-slate-400" aria-hidden="true"></i>
+                <h3 class="text-base font-bold text-slate-700">No Complaints Found</h3>
+                <p class="text-xs text-slate-500">No complaints match your active filter criteria. Try clearing filters.</p>
+                <div class="pt-2">
+                    <a href="{{ url_for('citizen.dashboard') }}" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold">
+                        Clear All Filters
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const catData = {{ stats.category_counts | tojson }};
+    const catLabels = Object.keys(catData);
+    const catValues = Object.values(catData);
+
+    const ctxCat = document.getElementById('categoryChart').getContext('2d');
+    new Chart(ctxCat, {
+        type: 'doughnut',
+        data: {
+            labels: catLabels,
+            datasets: [{
+                data: catValues,
+                backgroundColor: [
+                    '#0284c7', '#0d9488', '#f59e0b', '#8b5cf6',
+                    '#ef4444', '#10b981', '#64748b'
+                ],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { boxWidth: 12, font: { size: 10 } }
+                }
+            },
+            cutout: '65%'
+        }
+    });
+
+    const statusData = {{ stats.status_counts | tojson }};
+    const ctxStatus = document.getElementById('statusChart').getContext('2d');
+    new Chart(ctxStatus, {
+        type: 'bar',
+        data: {
+            labels: ['Reported', 'In Progress', 'Resolved'],
+            datasets: [{
+                label: 'Complaints',
+                data: [
+                    statusData['Reported'] || 0,
+                    statusData['In Progress'] || 0,
+                    statusData['Resolved'] || 0
+                ],
+                backgroundColor: ['#3b82f6', '#a855f7', '#10b981'],
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, ticks: { precision: 0 } },
+                x: { grid: { display: false } }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+
+    const map = L.map('civic-map').setView([11.0168, 76.9558], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 18
+    }).addTo(map);
+
+    function getMarkerColor(priority) {
+        switch(priority) {
+            case 'Critical': return '#e11d48';
+            case 'High': return '#d97706';
+            case 'Medium': return '#ca8a04';
+            default: return '#059669';
+        }
+    }
+
+    fetch("{{ url_for('api.api_complaints') }}")
+        .then(res => res.json())
+        .then(complaints => {
+            complaints.forEach(c => {
+                if (c.latitude && c.longitude) {
+                    const color = getMarkerColor(c.priority);
+                    const marker = L.circleMarker([c.latitude, c.longitude], {
+                        radius: c.priority === 'Critical' ? 10 : 8,
+                        fillColor: color,
+                        color: '#ffffff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    }).addTo(map);
+
+                    const popupContent = `
+                        <div class="text-xs space-y-1 p-1 max-w-[200px]">
+                            <div class="font-mono font-bold text-[10px] text-slate-500">${c.code}</div>
+                            <div class="font-bold text-slate-900">${c.title}</div>
+                            <div class="text-[11px] text-slate-600">${c.location}</div>
+                            <div class="pt-1 flex items-center justify-between">
+                                <span class="font-bold" style="color:${color}">${c.priority} Priority</span>
+                                <span class="font-bold text-slate-700">${c.status}</span>
+                            </div>
+                            <div class="pt-2">
+                                <a href="/complaint/${c.id}" class="text-brand-600 font-bold hover:underline">View Details &rarr;</a>
+                            </div>
+                        </div>
+                    `;
+                    marker.bindPopup(popupContent);
+                }
+            });
+        })
+        .catch(err => console.error("Map data fetch error:", err));
+</script>
+{% endblock %}

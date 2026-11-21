@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint Submitted - {{ complaint.complaint_code }} - CivicResolve{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    
+    <!-- Top Success Animation & Code -->
+    <div class="text-center space-y-4 mb-10">
+        <div class="h-20 w-20 mx-auto rounded-3xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center text-3xl shadow-xl shadow-emerald-500/25 animate-bounce" aria-hidden="true">
+            <i class="fa-solid fa-check"></i>
+        </div>
+        
+        <div class="space-y-1">
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Complaint Successfully Filed!</h1>
+            <p class="text-slate-600 text-sm">Your report has been analyzed by AI and assigned to the municipal department.</p>
+        </div>
+
+        <!-- Complaint Code Pill with Copy Button -->
+        <div class="pt-2">
+            <div class="inline-flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border-2 border-slate-200 shadow-md">
+                <span class="text-xs uppercase font-bold text-slate-500">Complaint ID:</span>
+                <span id="complaint-code-text" class="font-mono text-xl font-black text-brand-700 tracking-wider">
+                    {{ complaint.complaint_code }}
+                </span>
+                <button type="button" onclick="copyComplaintCode()" class="ml-2 p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-brand-500" title="Copy to clipboard" aria-label="Copy complaint ID to clipboard">
+                    <i id="copy-icon" class="fa-regular fa-copy" aria-hidden="true"></i>
+                    <span id="copy-text">Copy</span>
+                </button>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-2">Save this code to check your complaint status at any time.</p>
+        </div>
+    </div>
+
+    <!-- AI Triage Result Card -->
+    <div class="bg-white rounded-3xl shadow-xl border border-slate-200/90 overflow-hidden mb-8">
+        
+        <!-- Header Banner -->
+        <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-brand-950 p-6 text-white flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-300 text-lg" aria-hidden="true">
+                    <i class="fa-solid fa-microchip"></i>
+                </div>
+                <div>
+                    <h2 class="text-base font-bold text-white">AI Classification Diagnostics</h2>
+                    <p class="text-xs text-slate-300">Automated triage outcome based on municipal urgency metrics</p>
+                </div>
+            </div>
+
+            <!-- AI Engine Badge -->
+            <div class="flex items-center gap-2">
+                {% if complaint.ai_mode == 'Gemini' %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <i class="fa-solid fa-bolt mr-1.5" aria-hidden="true"></i> AI: Gemini
+                    </span>
+                {% else %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <i class="fa-solid fa-brain mr-1.5" aria-hidden="true"></i> AI: Demo Mode
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- AI Diagnostic Metrics Grid -->
+        <div class="p-6 sm:p-8 space-y-6">
+            
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                
+                <!-- Category -->
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Classified Category</div>
+                    <div class="text-lg font-extrabold text-slate-900 mt-1 flex items-center gap-2">
+                        <i class="fa-solid fa-tag text-brand-600 text-sm" aria-hidden="true"></i>
+                        {{ complaint.category }}
+                    </div>
+                </div>
+
+                <!-- Priority Badge -->
+                <div class="p-4 rounded-2xl border 
+                    {% if complaint.priority == 'Critical' %}bg-rose-50 border-rose-300 text-rose-900
+                    {% elif complaint.priority == 'High' %}bg-amber-50 border-amber-300 text-amber-900
+                    {% elif complaint.priority == 'Medium' %}bg-yellow-50 border-yellow-300 text-yellow-900
+                    {% else %}bg-emerald-50 border-emerald-300 text-emerald-900{% endif %}">
+                    <div class="text-[11px] font-bold uppercase tracking-wider opacity-75">Assigned Urgency</div>
+                    <div class="text-lg font-extrabold mt-1 flex items-center gap-2">
+                        {% if complaint.priority == 'Critical' %}
+                            <span class="h-2.5 w-2.5 rounded-full bg-rose-600 animate-ping" aria-hidden="true"></span>
+                        {% endif %}
+                        {{ complaint.priority }} Priority
+                    </div>
+                </div>
+
+                <!-- Confidence -->
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500">AI Confidence Score</div>
+                    <div class="text-lg font-extrabold text-slate-900 mt-1 flex items-center gap-2">
+                        <i class="fa-solid fa-gauge-high text-teal-600 text-sm" aria-hidden="true"></i>
+                        {{ complaint.ai_confidence }}%
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Priority Reason Box -->
+            <div class="p-4 rounded-2xl bg-brand-50/70 border border-brand-200 text-sm space-y-1">
+                <div class="text-xs font-bold uppercase tracking-wider text-brand-800 flex items-center gap-1.5">
+                    <i class="fa-solid fa-shield-halved text-brand-600" aria-hidden="true"></i> AI Priority Reason
+                </div>
+                <p class="text-slate-800 font-medium leading-relaxed">
+                    {{ complaint.priority_reason or 'Evaluated based on public safety hazards, traffic impact, and environmental sanitation.' }}
+                </p>
+            </div>
+
+            <!-- Assigned Department -->
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Routed Municipal Department</div>
+                    <div class="text-base font-bold text-slate-900 mt-0.5 flex items-center gap-2">
+                        <i class="fa-solid fa-building text-slate-600" aria-hidden="true"></i>
+                        {{ complaint.department }}
+                    </div>
+                </div>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200 self-start sm:self-auto">
+                    <i class="fa-solid fa-inbox mr-1.5" aria-hidden="true"></i> Initial Status: Reported
+                </span>
+            </div>
+
+            <!-- AI Summary -->
+            {% if complaint.ai_summary %}
+            <div class="text-xs text-slate-700 bg-slate-100 p-3.5 rounded-xl border border-slate-200">
+                <strong class="text-slate-900">AI Summary:</strong> {{ complaint.ai_summary }}
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+    <!-- Submitted Details Overview Card -->
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-200/90 p-6 sm:p-8 space-y-4 mb-8">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-600 border-b border-slate-100 pb-2">
+            Submitted Incident Details
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-3">
+                <div>
+                    <span class="text-xs text-slate-500 font-semibold uppercase">Title:</span>
+                    <p class="text-sm font-bold text-slate-900">{{ complaint.title }}</p>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-500 font-semibold uppercase">Location:</span>
+                    <p class="text-sm text-slate-700 font-medium flex items-center gap-1.5 mt-0.5">
+                        <i class="fa-solid fa-location-dot text-rose-500" aria-hidden="true"></i> {{ complaint.location }}
+                    </p>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-500 font-semibold uppercase">Description:</span>
+                    <p class="text-xs text-slate-600 leading-relaxed mt-0.5">{{ complaint.description }}</p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <span class="text-xs text-slate-500 font-semibold uppercase">Reported By:</span>
+                    <p class="text-sm text-slate-700 font-medium">{{ complaint.citizen_name or 'Anonymous Citizen' }}</p>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-500 font-semibold uppercase">Submission Time:</span>
+                    <p class="text-sm text-slate-700 font-medium">{{ complaint.created_at }}</p>
+                </div>
+
+                {% if complaint.image_path %}
+                <div>
+                    <span class="text-xs text-slate-500 font-semibold uppercase">Attached Photo:</span>
+                    <div class="mt-1">
+                        <img src="{{ url_for('static', filename=complaint.image_path) }}" alt="Photographic proof submitted for {{ complaint.title }}" class="h-28 w-auto rounded-xl border border-slate-200 object-cover shadow-xs">
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex flex-wrap items-center justify-center gap-4">
+        <a href="{{ url_for('citizen.track', code=complaint.complaint_code) }}" 
+           class="px-8 py-3.5 rounded-xl font-bold text-sm text-white bg-slate-900 hover:bg-slate-800 shadow-md transition flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-slate-900">
+            <i class="fa-solid fa-magnifying-glass-location" aria-hidden="true"></i> Track This Complaint Now
+        </a>
+        <a href="{{ url_for('citizen.dashboard') }}" 
+           class="px-6 py-3.5 rounded-xl font-bold text-sm text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 shadow-xs transition flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-slate-400">
+            <i class="fa-solid fa-chart-pie" aria-hidden="true"></i> View Public Dashboard
+        </a>
+        <a href="{{ url_for('citizen.report') }}" 
+           class="px-6 py-3.5 rounded-xl font-bold text-sm text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 transition flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-brand-500">
+            <i class="fa-solid fa-plus-circle" aria-hidden="true"></i> Report Another Issue
+        </a>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function copyComplaintCode() {
+        const code = document.getElementById('complaint-code-text').innerText.trim();
+        navigator.clipboard.writeText(code).then(() => {
+            const copyIcon = document.getElementById('copy-icon');
+            const copyText = document.getElementById('copy-text');
+            copyIcon.className = 'fa-solid fa-check text-emerald-600';
+            copyText.innerText = 'Copied!';
+            setTimeout(() => {
+                copyIcon.className = 'fa-regular fa-copy';
+                copyText.innerText = 'Copy';
+            }, 2000);
+        });
+    }
+</script>
+{% endblock %}

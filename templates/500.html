@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}500 – Server Error | CivicResolve{% endblock %}
+
+{% block content %}
+<main id="main-content" class="flex-1 flex items-center justify-center py-20 px-4">
+    <div class="max-w-lg w-full text-center">
+        <!-- Illustration -->
+        <div class="mb-8 flex justify-center">
+            <div class="relative">
+                <div class="h-40 w-40 rounded-full bg-red-50 border-4 border-red-100 flex items-center justify-center shadow-lg">
+                    <i class="fa-solid fa-triangle-exclamation text-6xl text-red-400" aria-hidden="true"></i>
+                </div>
+                <div class="absolute -top-2 -right-2 h-10 w-10 rounded-full bg-red-100 border-2 border-red-200 flex items-center justify-center">
+                    <span class="text-red-600 font-extrabold text-sm" aria-hidden="true">!</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Code & Heading -->
+        <p class="text-8xl font-extrabold text-red-100 leading-none mb-2" aria-hidden="true">500</p>
+        <h1 class="text-2xl font-bold text-slate-800 mb-3">Internal Server Error</h1>
+        <p class="text-slate-500 mb-6 max-w-sm mx-auto leading-relaxed">
+            Something went wrong on our end. Our team has been notified. 
+            Your complaint data is safe — please try again in a moment.
+        </p>
+
+        <!-- Alert Box -->
+        <div class="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-xl text-left" role="alert">
+            <div class="flex items-start gap-3">
+                <i class="fa-solid fa-circle-info text-amber-500 mt-0.5 flex-shrink-0" aria-hidden="true"></i>
+                <div class="text-sm text-amber-800">
+                    <p class="font-semibold mb-1">What you can do:</p>
+                    <ul class="list-disc list-inside space-y-1 text-amber-700">
+                        <li>Refresh the page and try again</li>
+                        <li>Go back to the home page</li>
+                        <li>If the problem persists, try again later</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a href="{{ url_for('citizen.index') }}"
+               class="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl shadow transition focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:outline-none">
+                <i class="fa-solid fa-house" aria-hidden="true"></i>
+                Go to Home
+            </a>
+            <button onclick="window.location.reload()"
+                    class="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-xl border border-slate-200 shadow-sm transition focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:outline-none">
+                <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+                Refresh Page
+            </button>
+        </div>
+
+        <p class="mt-10 text-xs text-slate-400">
+            Error reference: 500 Internal Server Error &mdash; CivicResolve Platform
+        </p>
+    </div>
+</main>
+{% endblock %}

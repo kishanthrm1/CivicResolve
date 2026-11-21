@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint {{ complaint.complaint_code }} - CivicResolve{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    
+    <!-- Top Navigation / Breadcrumb -->
+    <div class="flex items-center justify-between text-xs">
+        <a href="{{ url_for('citizen.dashboard') }}" class="font-bold text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 focus-visible:ring-1 focus-visible:ring-brand-500 rounded p-1">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to Public Dashboard
+        </a>
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('citizen.track', code=complaint.complaint_code) }}" class="px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 font-bold border border-brand-200 hover:bg-brand-100 transition focus-visible:ring-1 focus-visible:ring-brand-500">
+                <i class="fa-solid fa-radar mr-1" aria-hidden="true"></i> Track Live Timeline
+            </a>
+            {% if admin_logged_in %}
+            <a href="{{ url_for('admin.dashboard') }}" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white font-bold hover:bg-slate-800 transition focus-visible:ring-1 focus-visible:ring-slate-400">
+                <i class="fa-solid fa-shield-halved mr-1" aria-hidden="true"></i> Admin Panel
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Header Card -->
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-200/90 overflow-hidden">
+        
+        <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-brand-950 p-6 sm:p-8 text-white space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-xs font-bold px-3 py-1 rounded-lg bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                        {{ complaint.complaint_code }}
+                    </span>
+                    <span class="text-xs text-slate-400">Created: {{ complaint.created_at }}</span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <!-- Priority Badge -->
+                    <span class="px-3 py-1 rounded-full text-xs font-bold 
+                        {% if complaint.priority == 'Critical' %}bg-rose-500/20 text-rose-300 border border-rose-500/30
+                        {% elif complaint.priority == 'High' %}bg-amber-500/20 text-amber-300 border border-amber-500/30
+                        {% elif complaint.priority == 'Medium' %}bg-yellow-500/20 text-yellow-300 border border-yellow-500/30
+                        {% else %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% endif %}">
+                        {{ complaint.priority }} Priority
+                    </span>
+
+                    <!-- Status Badge -->
+                    <span class="px-3 py-1 rounded-full text-xs font-bold 
+                        {% if complaint.status == 'Resolved' %}bg-emerald-500 text-white
+                        {% elif complaint.status == 'In Progress' %}bg-purple-600 text-white
+                        {% else %}bg-blue-600 text-white{% endif %}">
+                        {{ complaint.status }}
+                    </span>
+                </div>
+            </div>
+
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-white leading-tight">
+                {{ complaint.title }}
+            </h1>
+
+            <p class="text-xs sm:text-sm text-slate-300 flex items-center gap-2">
+                <i class="fa-solid fa-location-dot text-rose-400" aria-hidden="true"></i> {{ complaint.location }}
+            </p>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-12 gap-8">
+            
+            <!-- Left 7 cols: Description, photo, reporter -->
+            <div class="md:col-span-7 space-y-6">
+                <div>
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Detailed Description</h2>
+                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-sm text-slate-700 leading-relaxed font-normal whitespace-pre-line">
+                        {{ complaint.description }}
+                    </div>
+                </div>
+
+                <!-- Incident Photo -->
+                {% if complaint.image_path %}
+                <div>
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Photographic Evidence</h2>
+                    <div class="rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+                        <img src="{{ url_for('static', filename=complaint.image_path) }}" alt="Photographic proof of {{ complaint.title }}" class="w-full max-h-80 object-cover">
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Reporter info -->
+                <div class="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs">
+                    <div>
+                        <span class="text-slate-500 uppercase font-semibold text-[10px] block">Reported By</span>
+                        <span class="font-bold text-slate-800 text-sm">{{ complaint.citizen_name or 'Anonymous Citizen' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 uppercase font-semibold text-[10px] block">Contact Info</span>
+                        <span class="font-medium text-slate-700">{{ complaint.citizen_contact or 'Not Provided' }}</span>
+                    </div>
+                </div>
+
+                <!-- Mini Map if coordinates are present -->
+                {% if complaint.latitude and complaint.longitude %}
+                <div class="space-y-2">
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                        <i class="fa-solid fa-map-pin text-brand-600" aria-hidden="true"></i> Coordinates: {{ complaint.latitude }}, {{ complaint.longitude }}
+                    </h2>
+                    <div id="incident-map" class="h-48 w-full rounded-2xl border border-slate-200 overflow-hidden z-10 shadow-inner" role="application" aria-label="Incident location map"></div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Right 5 cols: AI Triage Diagnostics & Department -->
+            <div class="md:col-span-5 space-y-6">
+                
+                <!-- AI Diagnostics Card -->
+                <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <i class="fa-solid fa-brain text-brand-600" aria-hidden="true"></i> AI Triage Breakdown
+                        </span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">
+                            {{ complaint.ai_mode }}
+                        </span>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <div>
+                            <span class="text-slate-500 uppercase font-semibold text-[10px] block">Assigned Department</span>
+                            <span class="font-bold text-slate-900 text-sm block mt-0.5">{{ complaint.department }}</span>
+                        </div>
+
+                        <div>
+                            <span class="text-slate-500 uppercase font-semibold text-[10px] block">Category</span>
+                            <span class="font-bold text-slate-800">{{ complaint.category }}</span>
+                        </div>
+
+                        <div>
+                            <span class="text-slate-500 uppercase font-semibold text-[10px] block">AI Confidence Score</span>
+                            <div class="flex items-center gap-2 mt-1">
+                                <div class="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden" role="progressbar" aria-valuenow="{{ complaint.ai_confidence }}" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="h-full bg-teal-500 rounded-full" style="width: {{ complaint.ai_confidence }}%;"></div>
+                                </div>
+                                <span class="font-mono font-bold text-slate-800">{{ complaint.ai_confidence }}%</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <span class="text-slate-500 uppercase font-semibold text-[10px] block">Priority Justification</span>
+                            <p class="text-slate-700 bg-white p-3 rounded-xl border border-slate-200 mt-1 leading-relaxed">
+                                {{ complaint.priority_reason or 'Evaluated based on urban safety risk and municipal guidelines.' }}
+                            </p>
+                        </div>
+
+                        {% if complaint.ai_summary %}
+                        <div>
+                            <span class="text-slate-500 uppercase font-semibold text-[10px] block">AI Generated Summary</span>
+                            <p class="text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 mt-1 italic">
+                                "{{ complaint.ai_summary }}"
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Latest Municipal Remark -->
+                <div class="p-5 rounded-2xl bg-amber-50 border border-amber-200 text-xs space-y-1.5">
+                    <div class="font-bold text-amber-900 flex items-center gap-1.5">
+                        <i class="fa-solid fa-clipboard-check text-amber-600" aria-hidden="true"></i> Official Municipal Remarks
+                    </div>
+                    <p class="text-amber-800 leading-relaxed font-medium">
+                        {{ complaint.admin_remarks or 'No staff remarks logged yet.' }}
+                    </p>
+                </div>
+
+                <!-- Audit History -->
+                <div class="p-5 rounded-2xl bg-white border border-slate-200 space-y-3">
+                    <h2 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Status History Log</h2>
+                    <div class="space-y-3 text-xs">
+                        {% for h in history %}
+                        <div class="flex items-start gap-2.5 border-b border-slate-100 last:border-0 pb-2.5 last:pb-0">
+                            <span class="h-2 w-2 rounded-full bg-brand-500 mt-1.5 flex-shrink-0" aria-hidden="true"></span>
+                            <div class="space-y-0.5">
+                                <div class="flex items-center gap-2">
+                                    <strong class="text-slate-900">{{ h.status }}</strong>
+                                    <span class="text-[10px] text-slate-500 font-mono">{{ h.changed_at }}</span>
+                                </div>
+                                <p class="text-slate-600 text-[11px]">{{ h.remark }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if complaint.latitude and complaint.longitude %}
+<script>
+    const incidentMap = L.map('incident-map').setView([{{ complaint.latitude }}, {{ complaint.longitude }}], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(incidentMap);
+
+    L.circleMarker([{{ complaint.latitude }}, {{ complaint.longitude }}], {
+        radius: 10,
+        fillColor: '#e11d48',
+        color: '#ffffff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.9
+    }).addTo(incidentMap).bindPopup("<b>{{ complaint.complaint_code }}</b><br>{{ complaint.title }}").openPopup();
+</script>
+{% endif %}
+{% endblock %}

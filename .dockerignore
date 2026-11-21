@@ -1,0 +1,25 @@
+# Git & Environment
+.git/
+.github/
+.env
+venv/
+.venv/
+env/
+
+# Python cache & tests
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+
+# Local database and uploads
+*.db
+*.sqlite3
+static/uploads/*
+!static/uploads/.gitkeep
+
+# Docs & Dev specs
+requirements-dev.txt
