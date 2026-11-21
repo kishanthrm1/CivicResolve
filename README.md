@@ -267,8 +267,8 @@ gcloud run deploy civicresolve \
 ### Report an Issue
 ![Report Form](screenshots/report.png)
 
-### AI Classification Result
-![AI Result](screenshots/result.png)
+### AI Classification Track
+![AI Result](screenshots/track.png)
 
 ### Public Dashboard
 ![Dashboard](screenshots/dashboard.png)
